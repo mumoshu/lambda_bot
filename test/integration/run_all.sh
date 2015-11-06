@@ -8,6 +8,7 @@ function test() {
 
 test api_gateway playground3 lambda_bot "lambda_bot hi"
 test api_gateway playground3 yusuke.kuoka "lambda_bot hi"
+test api_gateway playground3 yusuke.kuoka "lambda_bot bar"
 test api_gateway playground3 yusuke.kuoka "lambda_bot say deployment completed"
 test scheduled_event every4min
 test scheduled_event every5min

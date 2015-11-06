@@ -1,7 +1,7 @@
 var LambdaBot = require('lambda_bot');
 var env = require('node-env-file');
 
-env(__dirname + '/../../.env');
+env(__dirname + '/.env');
 
 var bot = new LambdaBot({
     iconEmoji: process.env['SLACK_ICON_EMOJI'],

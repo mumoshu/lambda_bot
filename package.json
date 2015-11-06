@@ -2,7 +2,7 @@
   "name": "lambda_bot",
   "version": "1.0.0",
   "description": "",
-  "main": "lambda_bot.js",
+  "main": "lib/lambda_bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

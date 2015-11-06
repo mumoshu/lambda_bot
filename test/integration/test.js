@@ -36,4 +36,4 @@ test_bot.handler(event, context);
 setTimeout(function() {
     console.error("timed out.");
     process.exit(2)
-}, 2000);
+}, 4000);
