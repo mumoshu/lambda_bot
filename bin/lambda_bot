@@ -1,0 +1,128 @@
+#!/bin/bash
+
+# Usage:
+#  LAMBDA_HANDLER=example_bot.handler \
+#  LAMBDA_FUNCTION_NAME=lambda_bot \
+#  SLACK_USER_NAME=yusuke.kuoka \
+#  SLACK_CHANNEL_NAME=playground3 \
+#  bin/lambda_bot deploy
+
+handler=${LAMBDA_HANDLER:-index.handler}
+function_name=${LAMBDA_FUNCTION_NAME:-lambda_bot}
+channel_name=$SLACK_CHANNEL_NAME
+user_name=$SLACK_USER_NAME
+
+if_debugging() {
+  if [ ! -z "$DEBUG" ]; then
+    "$@"
+  else
+    return 1
+  fi
+}
+
+info_out() {
+  if [ ! -z "$LOG_PATH" ]; then
+     echo "$LOG_PATH"
+  else
+     echo "/dev/stdout"
+  fi
+}
+
+debug_out() {
+  if_debugging echo "$(info_out)" || echo "/dev/null"
+}
+
+debug() {
+  if_debugging "$@" || :
+}
+
+info() {
+  echo "$1" > $(info_out)
+}
+
+archive() {
+  local build_dir=${BUILD_DIR:-build}
+
+  info "Archiving a lambda function."
+
+  mkdir -p $build_dir/
+  rm -Rf $build_dir/*
+
+  cp -R node_modules $build_dir/
+
+  if [ ! -e node_modules/lambda_bot ]; then
+    mkdir $build_dir/node_modules/lambda_bot
+    cp -R package.json lib $build_dir/node_modules/lambda_bot/
+  fi
+
+  cp .env *.js build/
+
+  pushd $build_dir > /dev/null
+  if [ -e ../dist.zip ]; then
+    rm ../dist.zip
+  fi
+  zip ../dist.zip -r .env * > $(debug_out)
+  popd > /dev/null
+}
+
+upload() {
+  info "Uploading the lambda function."
+
+  if aws lambda get-function --function-name $function_name > $(debug_out) 2>&1; then
+    info "The lambda function named $function_name already exists. Updating."
+
+    aws lambda update-function-code --output json --function-name $function_name --zip-file fileb://$(pwd)/dist.zip > $(debug_out) && debug unzip -l dist.zip
+    aws lambda update-function-configuration --output json --function-name $function_name --handler $handler > $(debug_out)
+  else
+    info "The lambda function named $function_name does not exist. Creating."
+
+    aws lambda create-function --function-name $function_name --runtime nodejs --role $(aws iam list-roles --output json | jq -r '.Roles[].Arn | select(match("lambda_basic_execution"))') --handler $handler --zip-file fileb://$(pwd)/dist.zip --region ap-northeast-1 > $(debug_out) && debug unzip -l dist.zip
+  fi
+}
+
+undeploy() {
+  info "Undeploying the lambda function."
+
+  aws lambda delete-function --function-name $function_name
+}
+
+test() {
+  info "Testing the lambda function."
+
+  aws lambda invoke --function-name $function_name --payload "{\"channel_name\":\"$channel_name\",\"user_name\":\"$user_name\",\"text\":\"lambda_bot say Deployment completed.\"}" test.out > $(debug_out)
+
+}
+
+deploy() {
+  archive
+  upload
+
+  if [ $? -eq 0 ]; then
+    test
+  fi
+}
+
+if ! which aws > /dev/null; then
+  echo "aws-cli is required to run this script." >&2
+  exit 1
+fi
+
+if [ -z "$SLACK_USER_NAME" ]; then
+  echo "The environment variable SLACK_USER_NAME must be defined."
+  exit 1
+fi
+
+if [ -z "$SLACK_CHANNEL_NAME" ]; then
+  echo "The environment variable SLACK_CHANNEL_NAME must be defined."
+  exit 1
+fi
+
+set -e
+
+debug set -vx || :
+
+if [ -z "$1" ]; then
+  run_all
+else
+  "$@"
+fi
