@@ -2,10 +2,17 @@
   "name": "lambda_bot",
   "version": "1.0.0",
   "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mumoshu/lambda_bot.git"
+  },
   "main": "lib/lambda_bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "bin": {
+    "lambda_bot": "./bin/lambda_bot"
+  },
+  "author": "Yusuke KUOKA",
   "license": "MIT"
 }
